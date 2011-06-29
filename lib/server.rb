@@ -26,7 +26,7 @@ class Screen
 end
 
 class Player
-  COLORS = %w{black white red green blue yellow orange purple cyan magenta navajoWhite beige aliceBlue aquamarine bisque coral darkGreen darkBlue}
+  COLORS = %w{black red green blue yellow orange purple cyan magenta navajoWhite beige aliceBlue aquamarine bisque coral darkGreen darkBlue}
   @@all = []
   @@count = 0
 
