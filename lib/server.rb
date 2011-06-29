@@ -4,31 +4,49 @@ require "rubygems"
 require "bundler/setup"
 require 'eventmachine'
 require 'em-websocket'
-require 'em-http'
+require 'evma_httpserver'
 require 'ruby-debug'
 require 'json'
 
 
+class Screen
+  @@ws = nil
+
+  def self.init(ws)
+    @@ws = ws
+  end
+
+  def self.send(data)
+    @@ws.send(data)
+  end
+
+  def self.connected?
+    !!@@ws
+  end
+end
+
 class Player
+  COLORS = %w{black white red green blue yellow orange purple cyan magenta navajoWhite beige aliceBlue aquamarine bisque coral darkGreen darkBlue}
   @@all = []
   @@count = 0
 
   attr_accessor :name, :uid, :ws, :top, :left
 
-  def initialize(ws)
-    @uid = rand(10000)
+  def initialize(uid)
+    @uid = uid
     @ws = ws
     @top = 10
     @left = 10 + (@@count * 10) 
     @@count += 1
-    @name = "player#{@@count}"
+    @color = COLORS[@@count]
+    @name = "#{uid}"
     @@all << self
-    ws.send({ :action => :player_info, :params => { :uid => @uid, :name => @name} }.to_json)
-    Player.all.each {|p| p.ws.send({ :action => :send_state, :params => Player.state}.to_json)}
+    Screen.send({ :action => :player_info, :params => { :uid => @uid, :name => @name, :color => @color} }.to_json) if Screen.connected?
+    # Player.all.each {|p| p.ws.send({ :action => :send_state, :params => Player.state}.to_json)}
   end
 
   def self.state
-    Player.all.collect{|p| { :uid => p.uid, :name => p.name, :top => p.top, :left => p.left }}
+    Player.all.collect{|p| { :uid => p.uid, :name => p.name, :top => p.top, :left => p.left, :color => @color }}
   end
 
   def self.all
@@ -42,49 +60,83 @@ class Player
   def self.find_by_uid(uid)
     @@all.select {|p| p.uid == uid}.first
   end
+
+  def move(direction)
+    case direction
+    when 'right'
+      @left += 20
+    when 'left'
+      @left -= 20
+    when 'up'
+      @top -= 20
+    when 'down'
+      @top += 20
+    end
+  end
+end
+
+# class InputHandler < EM::P::HeaderAndContentProtocol
+#   def receive_request(headers, content)
+#     p [:request, headers, content]
+#     uid, action = $1, $2
+
+#     player = Player.find_by_uid(uid) || Player.new(uid)
+#     player.move(action)
+
+#     Screen.send({:action => 'send_state', :params => Player.state}.to_json)
+#   end
+# end
+
+class Handler < EventMachine::Connection
+  include EventMachine::HttpServer
+
+  def post_init
+    super
+    no_environment_strings
+  end
+ 
+  def process_http_request
+    res = EventMachine::DelegatedHttpResponse.new( self )
+    content = instance_variable_get '@http_post_content'
+    p content
+    content =~ /=([a-z0-9]+).*=([a-z0-9]+)/i
+    uid, action = $1, $2
+
+    player = Player.find_by_uid(uid) || Player.new(uid)
+    player.move(action)
+
+    Screen.send({:action => 'send_state', :params => Player.state}.to_json) if Screen.connected?
+
+    res.headers["Access-Control-Allow-Origin"] = '*'
+    res.status = 200
+    res.content_type 'text/html'
+    res.content = '<center><h1>Hi there</h1></center>'
+    res.send_response
+  end
 end
 
 EM.run do
-  # NanoWars::Game.start
-  #   Connection.start
-  EM::WebSocket.start(:host => '0.0.0.0', :port => 8080) do |ws|
+  EM::WebSocket.start(:host => '0.0.0.0', :port => 8081) do |ws|
     ws.onopen do
-      # Game.new_player(ws)
       puts "Client connected."
-      player = Player.new(ws)
-      Player.all.each { |p| p.ws.send({:action => 'new_player', :params => {:uid => player.uid, :name => player.name}}.to_json) }
+      Screen.init(ws)
     end
 
     ws.onmessage do |data|
-      # Game.on_message(data)
-      puts "Message received: '#{JSON.parse(data)}'."
-      data = JSON.parse(data)
-      player = Player.find_by_uid(data['state']['uid'])
-      player.top = data['state']['top']
-      player.left = data['state']['left']
-
-      state = []
-      Player.all.each do |p|
-        state << {
-        :uid => p.uid,
-        :name => p.name,
-        :top => p.top,
-        :left => p.left
-      }
-      end
-      
-      Player.all.each { |p| p.ws.send( { :action => 'send_state', :params => state }.to_json )}
+      puts 'Message received'
     end
 
     ws.onclose do
-      # Game.remove_current_player
-      current = []
-      Player.all.delete_if {|p| current << p if p.ws == ws}
-      Player.all.each { |p| p.ws.send({:action => 'player_exited', :params => {:uid => current.first.uid}}.to_json) }
-      puts "Client #{current.first.uid} disconnected."
+      puts "Client disconnected."
     end
 
     ws.onerror { |e| puts "err #{e.message}\n#{caller.join("\n")}" }
   end
+
+  EventMachine.epoll
+  EventMachine::start_server("0.0.0.0", 8080, Handler)
+
+  # EventMachine::start_server("0.0.0.0", 8080, InputHandler)
+
   puts "Server is up! Open '#{File.expand_path('../../index.html', __FILE__)}' on your browser."
 end

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>EventMachine</title>
+  <title>Tela</title>
   <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js"></script>
+  <script src="jquery.min.js"></script>
   <script src="player.js"></script>
 
   <script>
@@ -26,9 +26,10 @@
         "send_state": Game.updateState
       }
 
-      ws = new WebSocket("ws://localhost:8080/");
+      ws = new WebSocket("ws://localhost:8081/");
       
       ws.onmessage = function (evt) {
+        console.log(evt.data)
         var data = JSON.parse(evt.data);
         call[data.action](data.params);
       };

@@ -7,18 +7,19 @@ var Game = {
 	},
 
     newPlayer: function(params) {
-		var playing = false
-		$.each(Game.players, function(index, player) {
-			if(params.uid == player.uid) {
-				playing = true
-			}
-		});
+			var playing = false;
 
-		if(!playing) {
-	    	np = new Player(params.uid, params.name);
-			Game.players.push(np);
-			return np;
-		}
+			$.each(Game.players, function(index, player) {
+				if(params.uid == player.uid) {
+					playing = true;
+				}
+			});
+
+			if(!playing) {
+	    	np = new Player(params.uid, params.name, params.color);
+				Game.players.push(np);
+				return np;
+			}
     },
 
     playerExited: function(params) {
@@ -31,7 +32,7 @@ var Game = {
     },
 
     updateState: function(params) {
-		$('.element').remove();
+			$('.element').remove();
 
     	$.each(params, function(index, param) {
     		var player = null;
@@ -54,10 +55,11 @@ var Game = {
     }
 }
 
-function Player(id, name) {
+function Player(id, name, color) {
 	var self = this;
 	self.uid = id;
 	self.name = name;
+	self.color = color;
 	self.top = 10;
 	self.left = 10;
 
@@ -65,7 +67,7 @@ function Player(id, name) {
 		self.undraw();
 		$('.area').append('<div class="element" id="' + 
 			self.uid + 
-			'" style="margin-left: ' + self.left + 'px; margin-top: ' + self.top + 'px;"></div>');
+			'" style="margin-left: ' + self.left + 'px; margin-top: ' + self.top + 'px; background-color: ' + self.color + '"></div>');
 	}
 
 	this.undraw = function() {

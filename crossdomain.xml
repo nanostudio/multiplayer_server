@@ -1,0 +1,4 @@
+<cross-domain-policy>
+	<allow-access-from domain="*" to-ports="*" />
+	<allow-http-request-headers-from domain="*" headers="Flash-User-Agent" />
+</cross-domain-policy>
