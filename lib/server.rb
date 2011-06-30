@@ -11,6 +11,8 @@ require 'json'
 
 class Screen
   @@ws = nil
+  @@width = 800
+  @@height = 600
 
   def self.init(ws)
     @@ws = ws
