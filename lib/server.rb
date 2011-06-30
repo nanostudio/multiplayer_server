@@ -10,9 +10,9 @@ require 'json'
 
 
 class Screen
+  WIDTH = 800
+  HEIGHT = 600
   @@ws = nil
-  @@width = 800
-  @@height = 600
 
   def self.init(ws)
     @@ws = ws
@@ -66,14 +66,18 @@ class Player
   def move(direction)
     case direction
     when 'right'
-      @left += 20
+      @left = clamp((@left += 20), 0, Screen::WIDTH)
     when 'left'
-      @left -= 20
+      @left = clamp((@left -= 20), 0, Screen::WIDTH)
     when 'up'
-      @top -= 20
+      @top = clamp((@top -= 20), 0, Screen::HEIGHT)
     when 'down'
-      @top += 20
+      @top = clamp((@top += 20), 0, Screen::HEIGHT)
     end
+  end
+
+  def clamp(value, min, max)
+    [[value, min].max, max].min
   end
 end
 
